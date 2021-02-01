@@ -1,5 +1,3 @@
-[toc]
-
 # 篡改(Tampering)
 
 > 完整性（Hash、MAC、数字签名、ACL等）

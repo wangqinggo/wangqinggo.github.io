@@ -1,5 +1,3 @@
-[toc]
-
 # 信息泄露(Information disclosure)
 
 > 机密性（加密、ACL等）

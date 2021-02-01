@@ -1,5 +1,3 @@
-[toc]
-
 # 仿冒(Spoofing)
 
 > 消减措施：认证（密码认证、SSL/TLS、IPSec、SSH等）
