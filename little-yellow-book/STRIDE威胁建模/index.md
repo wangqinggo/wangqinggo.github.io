@@ -1,5 +1,5 @@
 - [仿冒(Spoofing)](./仿冒(Spoofing).md)
-- [信息泄露(Information%20disclosure)](./信息泄露(Information%20disclosure).md)
+- [信息泄露(Information disclosure)](./信息泄露(Information%20disclosure).md)
 - [抵赖(Repudiation)](./抵赖(Repudiation).md)
 - [拒绝服务攻击(Denial of Service)](./拒绝服务攻击(Denial%20of%20Service).md)
 - [权限提升(Elevation of privilege)](./权限提升(Elevation%20of%20privilege).md)
