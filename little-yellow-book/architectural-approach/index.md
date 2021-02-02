@@ -1,4 +1,4 @@
-- [classic-architecture..](./classic-architecture/index.md)
+- [classic-architecture...](./classic-architecture/index.md)
 - [4S分析法](./4S分析法.md)
 - [分析工具](./分析工具.md)
 - [待整理材料](./待整理材料.md)
