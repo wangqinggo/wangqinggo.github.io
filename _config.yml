@@ -1,1 +1,13 @@
+url: https://wangqinggo.github.io
+title: 小悠随想
+subtitle: Because it's there.
+author: 王青
+email: wangqinggo@gmail.com
+description: "做一枚有优雅品味的码农"
+date_format: "ordinal"
+github: [metadata]
+repository: wangqinggo/wangqinggo.github.io
+encoding: UTF-8
+future: true
+jailed: false
 theme: jekyll-theme-architect
