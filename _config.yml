@@ -11,3 +11,7 @@ encoding: UTF-8
 future: true
 jailed: false
 theme: jekyll-theme-architect
+jekyll_avatar:
+  enable: true
+  avatar: wangqinggo
+  size: 100
