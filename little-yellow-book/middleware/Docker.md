@@ -22,19 +22,19 @@
 
 - FROM
 
-- ARG | ENV （作用域不同）
+- ARG | ENV（作用域不同）
 
 - WORKDIR
 
 - RUN
 
-- COPY | ADD （优先COPY）
+- COPY | ADD（优先COPY）
 
 - VOLUME
 
 - EXPOSE
 
-- ENTRYPOINT | CMD (ENTRYPOINT优先)
+- ENTRYPOINT | CMD(ENTRYPOINT优先)
 
 ### 实践
 
