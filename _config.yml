@@ -10,4 +10,4 @@ repository: wangqinggo/wangqinggo.github.io
 encoding: UTF-8
 future: true
 jailed: false
-theme: jekyll-theme-architect
+theme: jekyll-theme-cayman
