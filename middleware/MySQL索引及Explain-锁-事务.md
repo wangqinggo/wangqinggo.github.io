@@ -109,8 +109,9 @@ XX
   ```
   explain select 1 union all select 1;
   ```
-| id | select\_type | table | type | possible\_keys | key | key\_len | ref | rows | Extra |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+| id | select_type | table | type | possible_keys | key | key_len | ref | rows | Extra |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | 1 | PRIMARY | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
 | 2 | UNION | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
 | NULL | UNION RESULT | &lt;union1,2&gt; | ALL | NULL | NULL | NULL | NULL | NULL | Using temporary |
