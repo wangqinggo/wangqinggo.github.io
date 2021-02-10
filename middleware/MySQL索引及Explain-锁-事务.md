@@ -106,15 +106,15 @@ XX
 
 	- union result：从union临时表检索结果的select。
 
-  ```
-  explain select 1 union all select 1;
-  ```
-
-| id | select_type | table | type | possible_keys | key | key_len | ref | rows | Extra |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 1 | PRIMARY | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
-| 2 | UNION | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
-| NULL | UNION RESULT | &lt;union1,2&gt; | ALL | NULL | NULL | NULL | NULL | NULL | Using temporary |
+    ```
+    explain select 1 union all select 1;
+     ```
+    
+    | id | select_type | table | type | possible_keys | key | key_len | ref | rows | Extra |
+    | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+    | 1 | PRIMARY | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
+    | 2 | UNION | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
+    | NULL | UNION RESULT | &lt;union1,2&gt; | ALL | NULL | NULL | NULL | NULL | NULL | Using temporary |
 
 3. table列：explain的行正在访问的表。
 
