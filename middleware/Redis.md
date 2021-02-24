@@ -72,7 +72,10 @@
         - [4.发起拉票&选举投票](#4发起拉票选举投票)
         - [5.替换节点](#5替换节点)
         - [6.集群配置更新](#6集群配置更新)
-    - [待定](#待定)
+  - [监控与告警](#监控与告警)
+    - [基础资源监控](#基础资源监控)
+    - [Redis可用性、性能指标、错误](#redis可用性性能指标错误)
+  - [其它](#其它)
   
 # Redis
 
@@ -651,12 +654,40 @@ DELAY = 500 milliseconds + random delay between 0 and 500 milliseconds + SLAVE_R
 5. 其他节点接收信息后更新配置；
 6. 原先主节点以及其Slave自动成为新的主节点的Slave。
 
+## 监控与告警
 
-### 待定
+参考：[How to Monitor Redis](https://blog.serverdensity.com/monitor-redis/)
 
-- 监控分析
+> 收集所有有助于故障排除的指标；
 
-- 应用使用redis注意
+### 基础资源监控
+
+1. CPU使用情况；
+2. 存储情况：
+   1. 内存使用情况，Swap交换区使用情况（类似于虚拟内存，有使用说明性能下降厉害）；
+   2. 硬盘情况；
+3. 网络情况；带宽、连接数等
+
+### Redis可用性、性能指标、错误
+
+- 可用性和查询
+  - connected_clients（连接数）
+  - keyspace（数据库总键数）
+  - instantaneous_ops_per_sec（每秒处理命令数）
+  - hit rate (calculated) =keyspace_hits / (keyspace_hits + keyspace_misses) (命中率)
+  - rdb_changes_since_last_save（自上次存储以来对数据库的更改数（重启会丢失的数据数））
+  - connected_slaves（该Master的Slave数）
+- 性能
+  - latency（响应查询平均时间）
+  - used_memory（使用的内存）
+  - evicted_keys（达到最大内存而被淘汰的键数）
+  - blocked_clients（被阻塞处于等待的客户端数目）
+- 错误
+  - rejected_connections（达到最大连接数被拒绝的连接数）
+  - keyspace_misses（失败键查找次数）
+  - master_link_down_since_seconds（主从断开时间）
+
+## 其它
 
 - 参数解读
 
