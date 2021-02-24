@@ -39,7 +39,7 @@
     - [Sentinel API](#sentinel-api)
     - [故障检测—— S_DOWN以及O_DOWN状态的检测](#故障检测-s_down以及o_down状态的检测)
       - [S_DOWN](#s_down)
-    - [O_DOWN](#o_down)
+      - [O_DOWN](#o_down)
     - [故障恢复](#故障恢复)
       - [failover大概流程](#failover大概流程)
       - [最佳Slave选择，权重依次递减](#最佳slave选择权重依次递减)
@@ -411,13 +411,13 @@ sentinel节点支持的命令有（不完全）：
 2. 如果Sentinel标记被监控的节点为master节点，但是从被监控节点得到的INFO命令回复内容显示该节点为Slave节点（说明发生了failover），则认为该节点主观下线。一个Sentinel节点判定主观下线时，会设置对应的被监控节点处于S_DOWN状态。
 3. 一个sentinel节点判定某被监控节点处于S_DOWN时会接着去查看其他sentinel节点对该节点的状态监测结果来进一步判定该节点是否真正下线，如果大部分sentinel节点都判定该节点处于`S_DOWN`状态，那么该节点会被标记为`O_DOWN`状态。
 
-:large_blue_circle:**Sentinel只对Master节点做O_DOWN状态判断，对Slave节点和其他Sentinel节点只做S_DOWN状态判断。**
+**Sentinel只对Master节点做O_DOWN状态判断，对Slave节点和其他Sentinel节点只做S_DOWN状态判断。**
 
-### O_DOWN
+#### O_DOWN
 
 > 如果发现超过qurom个sentinel节点都判断master节点为S_DOWN，那么sentinel节点就会判定该节点处于O_DOWN状态。
 
-:large_blue_circle:判定Master节点为O_DOWN时，就需要发起failover流程来让一个**好的slave**节点来替换掉现在的故障master节点，成为新的master节点。
+**判定Master节点为O_DOWN时，就需要发起failover流程来让一个好的slave节点来替换掉现在的故障master节点，成为新的master节点。**
 
 ### 故障恢复
 
@@ -427,11 +427,9 @@ sentinel节点支持的命令有（不完全）：
 
 #### failover大概流程
 
-:one:投票选出哨兵Leader；
-
-:two:由Leader哨兵选出替换故障Master的最佳Slave；
-
-:three:将通过订阅发布目前的Master信息。
+1. 投票选出哨兵Leader；
+2. 由Leader哨兵选出替换故障Master的最佳Slave；
+3. 将通过订阅发布目前的Master信息。
 
 #### 最佳Slave选择，权重依次递减
 
@@ -657,8 +655,6 @@ DELAY = 500 milliseconds + random delay between 0 and 500 milliseconds + SLAVE_R
 ### 待定
 
 - 监控分析
-
-- Redis为什么快
 
 - 应用使用redis注意
 
