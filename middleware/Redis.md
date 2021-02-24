@@ -33,18 +33,20 @@
     - [AOF](#aof)
     - [混合持久化](#混合持久化)
     - [持久化方案的建议](#持久化方案的建议)
-  - [主从复制模式](#主从复制模式)
+  - [Sentinel（哨兵）模式](#sentinel哨兵模式)
+    - [Sentinel功能列表](#sentinel功能列表)
+    - [节点发现功能](#节点发现功能)
+    - [Sentinel API](#sentinel-api)
+    - [故障检测—— S_DOWN以及O_DOWN状态的检测](#故障检测-s_down以及o_down状态的检测)
+      - [S_DOWN](#s_down)
+    - [O_DOWN](#o_down)
+    - [故障恢复](#故障恢复)
+      - [failover大概流程](#failover大概流程)
+      - [最佳Slave选择，权重依次递减](#最佳slave选择权重依次递减)
+  - [Cluster模式](#cluster模式)
     - [工作机制](#工作机制)
     - [优点](#优点)
     - [缺点](#缺点)
-  - [Sentinel（哨兵）模式](#sentinel哨兵模式)
-    - [工作机制](#工作机制-1)
-    - [优点](#优点-1)
-    - [缺点](#缺点-1)
-  - [Cluster模式](#cluster模式)
-    - [工作机制](#工作机制-2)
-    - [优点](#优点-2)
-    - [缺点](#缺点-2)
         - [参考：Redis集群详解（上）](#参考redis集群详解上)
     - [综上](#综上)
     - [集群主从复制数据同步](#集群主从复制数据同步)
@@ -341,94 +343,101 @@ def unlock(lock_name):
 
 - 通常的设计思路是利用主从复制机制来弥补持久化时性能上的影响。即Master上RDB、AOF都不做，保证Master的读写性能，而Slave上则同时开启RDB和AOF（或4.0以上版本的混合持久化方式）来进行持久化，保证数据的安全性。
 
-## 主从复制模式
-
-### 工作机制
-
-- slave启动后，向master发送SYNC命令，master接收到SYNC命令后通过bgsave保存快照（即上文所介绍的RDB持久化），并使用缓冲区记录保存快照这段时间内执行的写命令；
-
-- master将保存的快照文件发送给slave，并继续记录执行的写命令；
-
-- slave接收到快照文件后，加载快照文件，载入数据；
-
-- master快照发送完后开始向slave发送缓冲区的写命令，slave接收命令并执行，完成复制初始化；
-
-- 此后master每次执行一个写命令都会同步发送给slave，保持master与slave之间数据的一致性。
-
-### 优点
-
-- master能自动将数据同步到slave，可以进行读写分离，分担master的读压力；
-
-- master、slave之间的同步是以非阻塞的方式进行的，同步期间，客户端仍然可以提交查询或更新请求。
-
-### 缺点
-
-- 不具备自动容错与恢复功能，master或slave的宕机都可能导致客户端请求失败，需要等待机器重启或手动切换客户端IP才能恢复；
-
-- master宕机，如果宕机前数据没有同步完，则切换IP后会存在数据不一致的问题；
-
-- 难以支持在线扩容，Redis的容量受限于单机配置。
-
 ## Sentinel（哨兵）模式
+
+参考：[Redis Sentinel Documentation](https://redis.io/topics/sentinel)
+
+[Redis哨兵——主从节点的故障的检测与恢复](https://zhuanlan.zhihu.com/p/103982258)
 
 ![](image/sentinel.png)
 
-### 工作机制
+> Redis高可用方案，实现了自动的故障检测与恢复、服务发现以及应用端的故障提示。
 
-在配置文件中通过sentinel monitor <master-name> <ip> <redis-port> <quorum>来定位master的IP、端口，一个哨兵可以监控多个master数据库，只需要提供多个该配置项即可。哨兵启动后，会与要监控的master建立两条连接：
+### Sentinel功能列表
 
-- 一条连接用来订阅master的sentinel:hello频道与获取其他监控该master的哨兵节点信息
+- **Monitoring**：Sentinel持续的监控 Master节点、Slave节点以及其它Sentinel节点是否健康。
+- **Automatic failover**：当前的Master节点故障时，Sentinel会选择一个Slave节点来替换当前Master节点，并配置其他的Slave节点成为新的Master节点的从节点。同时Sentinel会通知客户端新的Master的地址。
+- **Notification**：当监控的集群节点出故障时，Sentinel可通过执行特定脚本、订阅来告知系统管理员或者其它应用程序来通知相应信息。
+- **Configuration provider**：当集群中发生failover时，应用方可从Sentinel获得新的Master节点和Slave节点的地址。
 
-- 另一条连接定期向master发送INFO等命令获取master本身的信息
+### 节点发现功能
 
-- 与master建立连接后，哨兵会执行三个操作：
+```
+sentinel monitor <master-group-name> <ip> <port> <quorum>
+#配置
+sentinel monitor mymaster 127.0.0.1 6379 2 # 两个发团判定即可
+sentinel down-after-milliseconds mymaster 60000 # PING命令超时时间
+sentinel failover-timeout mymaster 180000 # failover超时时间
+sentinel parallel-syncs mymaster 1 # 并行复制个数，如果为2，Master同一时刻要把数据发往两个节点
+```
 
-- 定期（一般10s一次，当master被标记为主观下线时，改为1s一次）向master和slave发送INFO命令
+- Sentinel会监控其它所有的节点（Sentinel、Master、Slave），但启动配置时只配置了Master；其它节点是如何被发现呢？Sentinel启动后，会定时向Master发送INFO命令。
 
-- 定期向master和slave的sentinel:hello频道发送自己的信息
+  命令返回：
 
-- 定期（1s一次）向master、slave和其他哨兵发送PING命令
+  ```
+  # 启动了两个Redis实例，Redis1端口为6666， Redis2端口为7777，Redis2的为Redis1的从节点。
+  # 我们对Master节点发送INFO命令，下述为部分输出结果。
+  
+  # Replication
+  role:master
+  connected_slaves:1
+  slave0:ip=127.0.0.1,port=7777,state=online,offset=0,lag=2
+  master_repl_offset:15
+  repl_backlog_active:1
+  repl_backlog_size:1048576
+  repl_backlog_first_byte_offset:2
+  repl_backlog_histlen:14
+  ```
 
-- 发送INFO命令可以获取当前数据库的相关信息从而实现新节点的自动发现。所以说哨兵只需要配置master数据库信息就可以自动发现其slave信息。获取到slave信息后，哨兵也会与slave建立两条连接执行监控。通过INFO命令，哨兵可以获取主从数据库的最新信息，并进行相应的操作，比如角色变更等。
+### Sentinel API
 
-- 接下来哨兵向主从数据库的sentinel:hello频道发送信息与同样监控这些数据库的哨兵共享自己的信息，发送内容为哨兵的ip端口、运行id、配置版本、master名字、master的ip端口还有master的配置版本。这些信息有以下用处：
+sentinel节点支持的命令有（不完全）：
 
-- 其他哨兵可以通过该信息判断发送者是否是新发现的哨兵，如果是的话会创建一个到该哨兵的连接用于发送PING命令。
+- **PING**: 返回PONG，用于测试该sentinel节点是否网络可达;
+- **SENTINEL Masters**：返回该sentinel节点所监控的所有master节点;
+- SENTINEL master \<master name> ：返回特定master节点的信息;
+- SENTINEL slaves \<master name>: 返回特定master节点的所有slave节点信息，常用于读写分离时应用端获得所有的slave地址用于读取数据。
 
-- 其他哨兵通过该信息可以判断master的版本，如果该版本高于直接记录的版本，将会更新
+### 故障检测—— S_DOWN以及O_DOWN状态的检测
 
-- 当实现了自动发现slave和其他哨兵节点后，哨兵就可以通过定期发送PING命令定时监控这些数据库和节点有没有停止服务。
+> S_DOWN(Subjectively-DOWN,主观下线)|O_DOWN（Objectively-DOWN，客观下线）
 
-- 如果被PING的数据库或者节点超时（通过 sentinel down-after-milliseconds master-name milliseconds 配置）未回复，哨兵认为其主观下线（sdown，s就是Subjectively —— 主观地）。
+#### S_DOWN
 
-- 如果下线的是master，哨兵会向其它哨兵发送命令询问它们是否也认为该master主观下线，如果达到一定数目（即配置文件中的quorum）投票，哨兵会认为该master已经客观下线（odown，o就是Objectively —— 客观地），并选举领头的哨兵节点对主从系统发起故障恢复。
+> Sentinel会定时向所有被监控的节点发送`PING`和`INFO`命令，**PING**用于检测监控节点是否网络可达，**INFO**用于获得节点信息。
 
-- 若没有足够的sentinel进程同意master下线，master的客观下线状态会被移除，若master重新向sentinel进程发送的PING命令返回有效回复，master的主观下线状态就会被移除。
+1. 如果超过**down_after_period**还未收到被监控节点的PING命令的**有效恢复**（**PONG**、**LOADING**或者**MASTERDOWN**），那么Sentinel就认为该节点主观下线。
+2. 如果Sentinel标记被监控的节点为master节点，但是从被监控节点得到的INFO命令回复内容显示该节点为Slave节点（说明发生了failover），则认为该节点主观下线。一个Sentinel节点判定主观下线时，会设置对应的被监控节点处于S_DOWN状态。
+3. 一个sentinel节点判定某被监控节点处于S_DOWN时会接着去查看其他sentinel节点对该节点的状态监测结果来进一步判定该节点是否真正下线，如果大部分sentinel节点都判定该节点处于`S_DOWN`状态，那么该节点会被标记为`O_DOWN`状态。
 
-- 哨兵认为master客观下线后，故障恢复的操作需要由选举的领头哨兵来执行，选举采用Raft算法：
+:large_blue_circle:**Sentinel只对Master节点做O_DOWN状态判断，对Slave节点和其他Sentinel节点只做S_DOWN状态判断。**
 
-  - 发现master下线的哨兵节点（我们称他为A）向每个哨兵发送命令，要求对方选自己为领头哨兵
-  - 如果目标哨兵节点没有选过其他人，则会同意选举A为领头哨兵
-  - 如果有超过一半的哨兵同意选举A为领头，则A当选
-  - 如果有多个哨兵节点同时参选领头，此时有可能存在一轮投票无竞选者胜出，此时每个参选的节点等待一个随机时间后再次发起参选请求，进行下一轮投票竞选，直至选举出领头哨兵
-- 选出领头哨兵后，领头者开始对系统进行故障恢复，从出现故障的master的从数据库中挑选一个来当选新的master,选择规则如下：
-  - 所有在线的slave中选择优先级最高的，优先级可以通过slave-priority配置
-  - 如果有多个最高优先级的slave，则选取复制偏移量最大（即复制越完整）的当选
-  - 如果以上条件都一样，选取id最小的slave
+### O_DOWN
 
-挑选出需要继任的slave后，领头哨兵向该数据库发送命令使其升格为master，然后再向其他slave发送命令接受新的master，最后更新数据。将已经停止的旧的master更新为新的master的从数据库，使其恢复服务后以slave的身份继续运行。
+> 如果发现超过qurom个sentinel节点都判断master节点为S_DOWN，那么sentinel节点就会判定该节点处于O_DOWN状态。
 
-### 优点
+:large_blue_circle:判定Master节点为O_DOWN时，就需要发起failover流程来让一个**好的slave**节点来替换掉现在的故障master节点，成为新的master节点。
 
-- 哨兵模式基于主从复制模式，所以主从复制模式有的优点，哨兵模式也有
+### 故障恢复
 
-- 哨兵模式下，master挂掉可以自动进行切换，系统可用性更高
+1. 设置新的Master节点替换掉原来的故障Master节点；
+2. 设置其他的节点成为新的Master节点的Slave节点用于主从复制；
+3. 告知客户端新的master节点地址信息，同时执行必要的脚本来通知系统管理员。
 
-### 缺点
+#### failover大概流程
 
-- 同样也继承了主从模式难以在线扩容的缺点，Redis的容量受限于单机配置
+:one:投票选出哨兵Leader；
 
-- 需要额外的资源来启动sentinel进程，实现相对复杂一点，同时slave节点作为备份节点不提供服务
+:two:由Leader哨兵选出替换故障Master的最佳Slave；
+
+:three:将通过订阅发布目前的Master信息。
+
+#### 最佳Slave选择，权重依次递减
+
+1. 根据指定的优先级选择（0~100），所有节点priority相同，进行第二步；
+2. 根据数据更新程度选择。所有 slave 节点复制数据时都会记录复制偏移量（slave_repl_offset），值越大说明与master数据更一致。会选择最大的；所有一样进行第三步；
+3. 根据runid选择；每个节点启动都会有一个唯一的runid，选择最小的。
 
 ## Cluster模式
 
