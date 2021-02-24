@@ -1,3 +1,4 @@
+[..](./../STRIDE威胁建模/index.md)
 # 抵赖(Repudiation)
 
 > 防抵赖（认证、审计日志等）

@@ -1,3 +1,4 @@
+[..](./../STRIDE威胁建模/index.md)
 - [信息泄露(Information disclosure)](#信息泄露information-disclosure)
   - [处理过程信息泄露](#处理过程信息泄露)
     - [保护信息关注](#保护信息关注)

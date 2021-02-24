@@ -1,3 +1,4 @@
+[..](./../STRIDE威胁建模/index.md)
 # 拒绝服务攻击(Denial of Service)
 
 > 可用性（负载均衡、过滤、缓存等）

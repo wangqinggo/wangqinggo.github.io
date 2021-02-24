@@ -1,3 +1,4 @@
+[..](./../STRIDE威胁建模/index.md)
 # 权限提升(Elevation of privilege)
 
 > 授权（权限最小化、沙箱等）

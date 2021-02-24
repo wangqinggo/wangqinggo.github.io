@@ -1,3 +1,4 @@
+[..](./../classic-architecture/index.md)
 # 分布式ID
 ## 约束
 
