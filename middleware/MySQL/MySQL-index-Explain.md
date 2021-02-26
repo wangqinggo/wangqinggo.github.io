@@ -1,4 +1,5 @@
-[..](./../middleware/index.md)
+[..](./../../middleware/index.md)
+
 - [索引](#索引)
   - [磁盘存取原理](#磁盘存取原理)
   - [底层数据结构](#底层数据结构)
@@ -14,10 +15,6 @@
     - [explain中的列](#explain中的列)
     - [索引最佳实践](#索引最佳实践)
       - [总结：假设index（a,b,c）](#总结假设indexabc)
-- [锁](#锁)
-  - [lock与latch](#lock与latch)
-  - [锁（感觉有些困难，待啃书、资料整理）](#锁感觉有些困难待啃书资料整理)
-- [事务](#事务)
 
 ## 索引
 
@@ -26,9 +23,7 @@
 ### 磁盘存取原理
 
 - 寻道时间：`速度慢、费时`,旋转时间：速度较快。因此要减少查找次数，节点大小为block的整数倍。
-
 - 系统从磁盘读取数据到内存时是以磁盘块（block）为基本单位的，位于同一个磁盘块中的数据会被一次性读取出来，而不是需要什么取什么。
-
 - InnoDB存储引擎中有页（Page）的概念，页是其磁盘管理的最小单位。InnoDB存储引擎中默认每个页的大小为16KB，可通过参数innodb_page_size将页的大小设置为4K、8K、16K，在MySQL中可通过如下命令查看页的大小：
 
   ```
@@ -53,7 +48,6 @@
 #### B+Tree索引（InnoDB存储引擎）
 
 - 非叶子节点只存储键值信息；
-
 - 所有叶子节点之间都有双向指针（适合范围查找），构成链式环状结构；
 - 数据都存放在叶子节点中。
 
@@ -62,7 +56,6 @@
 ##### 聚集索引（clustered index）与辅助索引（secondary index）
 
 - 上图为聚集索引（又称主键索引），叶子节点存放整张表的行记录数据；
-
 - 辅助索引叶子节点只存索引和相应的聚集索引，即主键（节省空间，数据一致性便于维护）。
 - 当使用辅助索引查询数据时，InnoDB存储引擎会遍历辅助索引找到主键，然后再通过主键在聚集索引中找到完整的行记录数据。
 
@@ -98,24 +91,20 @@ XX
 2. select_type列
 
 	- simple：简单查询，查询不包含子查询和union。
-
 	- primary：复杂查询最外层的select。
-
 	- derived（派生、衍生）：包含在from子句中的子查询。MySQL会将结果存放在一个临时表（派生表）中。
-
 	- union：在union中的第二个和随后的select。
-
 	- union result：从union临时表检索结果的select。
 
     ```
     explain select 1 union all select 1;
-     ```
-    
-    | id | select_type | table | type | possible_keys | key | key_len | ref | rows | Extra |
-    | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-    | 1 | PRIMARY | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
-    | 2 | UNION | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
-    | NULL | UNION RESULT | &lt;union1,2&gt; | ALL | NULL | NULL | NULL | NULL | NULL | Using temporary |
+    ```
+   
+   | id | select_type | table | type | possible_keys | key | key_len | ref | rows | Extra |
+   | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+   | 1 | PRIMARY | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
+   | 2 | UNION | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
+   | NULL | UNION RESULT | &lt;union1,2&gt; | ALL | NULL | NULL | NULL | NULL | NULL | Using temporary |
 
 3. table列：explain的行正在访问的表。
 
@@ -182,46 +171,3 @@ XX
 | where a=3 and b like 'k%k%' and c=4 | Y,使用了a,b,c |
 
 > like 'kk%'=const，'%kk'和'%kk%'想当于范围
-
-## 锁
-
-> 锁是计算机协调多个进程或线程并发访问某一资源的机制。
->
-> 在数据库中，处理传统的计算资源（如CPU、RAM、I/O等）的竞争外，数据也是一种共享资源。如何保证数据并发访问的一致性、有效性是所有数据库必须解决的一个问题；锁冲突也是影响数据库并发访问性能的一个重要因素。从这个角度来说，锁对数据库尤为重要，也更复杂。
-
-### lock与latch
-
-> latch为闩（shuan）锁（轻量锁），因为要求锁定时间必须非常短。latch分为mutex和rwlock，设计目的是用来保证并发线程操作临界资源的正确性，并且通常没有死锁检测机制。
->
-> lock的对象是事务，用来锁住数据库的对象，如表，页，行。并且一般在lock的对象仅在事务commit或rollback后才释放。有死锁机制。
-
-|          | lock                                                       | latch                                                        |
-| :------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
-| 对象     | 事务                                                       | 线程                                                         |
-| 保护     | 数据库内容                                                 | 内存数据结构                                                 |
-| 持续时间 | 整个事务过程                                               | 临界资源                                                     |
-| 模式     | 行锁、表锁、意向锁                                         | 读写锁（rwlock）、互斥量（mutex）                            |
-| 死锁     | 通过wait-for graph（图）、time out等机制进行死锁检测与处理 | 无死锁检测与处理机制。仅通过应用程序加锁的顺序（lock leveling）保证无死锁情况发生 |
-| 存在于   | Lock Manager的哈希表中                                     | 每个数据结构的对象中                                         |
-
-### 锁（感觉有些困难，待啃书、资料整理）
-
-- 从性能上分为`乐观锁`（用改版本对比实现CAS）和`悲观锁`；
-
-- 从操作类型上分，分为`读锁和写锁`（均属于悲观锁）；
-
-  - 读锁（共享锁 S Lock）：允许事务读一行数据；多个读操作可以同时进行而不会相互影响。
-  - 写锁（排它锁 X Lock）：当写操作没有完成前，会阻断其他写锁和读锁。
-
-> S锁仅与S锁兼容，X锁都不兼容。
-
-- 从数据库操作粒度分：`表锁和行锁`。
-
-|        | MyISAM                                                       | InnoDB                                                       |
-| ------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 表级锁 | 1.表级共享锁<br />2.表级排它锁<br />3.Concurrent insert 优化<br />4.low_priority_updates优化 | 1.意向共享锁<br />2.意向排他锁<br />3.表锁实现方式<br />4.优化建议 |
-| 行级锁 |                                                              |                                                              |
-
-## 事务
-
-![](https://s4.51cto.com/oss/201910/17/82a3c01c3391e56680ea2b17c66ab5c3.jpg-wh_600x-s_3113470031.jpg)
