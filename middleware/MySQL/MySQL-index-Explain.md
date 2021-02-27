@@ -26,7 +26,7 @@
 - 系统从磁盘读取数据到内存时是以磁盘块（block）为基本单位的，位于同一个磁盘块中的数据会被一次性读取出来，而不是需要什么取什么。
 - InnoDB存储引擎中有页（Page）的概念，页是其磁盘管理的最小单位。InnoDB存储引擎中默认每个页的大小为16KB，可通过参数innodb_page_size将页的大小设置为4K、8K、16K，在MySQL中可通过如下命令查看页的大小：
 
-  ```
+  ```sql
   mysql> show variables like 'innodb_page_size';
   ```
 
@@ -73,7 +73,7 @@
 
 > 会在explain基础上额外提供一些查询优化的信息。可紧跟其后通过show warnings命令得到优化后的语句（优化器处理）。
 
-```
+```sql
 mysql> explain select * from XX;
 XX
 mysql> show warnings;
@@ -96,15 +96,15 @@ XX
 	- union：在union中的第二个和随后的select。
 	- union result：从union临时表检索结果的select。
 
-    ```
+    ```sql
     explain select 1 union all select 1;
     ```
-   
-   | id | select_type | table | type | possible_keys | key | key_len | ref | rows | Extra |
-   | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-   | 1 | PRIMARY | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
-   | 2 | UNION | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
-   | NULL | UNION RESULT | &lt;union1,2&gt; | ALL | NULL | NULL | NULL | NULL | NULL | Using temporary |
+  
+  | id | select_type | table | type | possible_keys | key | key_len | ref | rows | Extra |
+  | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+  | 1 | PRIMARY | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
+  | 2 | UNION | NULL | NULL | NULL | NULL | NULL | NULL | NULL | No tables used |
+  | NULL | UNION RESULT | &lt;union1,2&gt; | ALL | NULL | NULL | NULL | NULL | NULL | Using temporary |
 
 3. table列：explain的行正在访问的表。
 

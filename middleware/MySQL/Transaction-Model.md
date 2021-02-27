@@ -11,9 +11,15 @@
   - [autocommit, Commit, and Rollback](#autocommit-commit-and-rollback)
       - [Grouping DML Operations with Transactions](#grouping-dml-operations-with-transactions)
       - [Transactions in Client-Side Languages](#transactions-in-client-side-languages)
-    - [Consistent Nonlocking Reads(非锁定一致性读)](#consistent-nonlocking-reads非锁定一致性读)
-      - [一致性读不支持某些DDL（drop、alter）语句](#一致性读不支持某些ddldropalter语句)
-      - [对于没有指定 `FOR UPDATE` 或者 `LOCK IN SHARE MODE` 的各种查询, 其行为有所不同, 如 `INSERT INTO ... SELECT`, `UPDATE ... (SELECT)`, 以及 `CREATE TABLE ... SELECT`:](#对于没有指定-for-update-或者-lock-in-share-mode-的各种查询-其行为有所不同-如-insert-into--select-update--select-以及-create-table--select)
+  - [Consistent Nonlocking Reads(非锁定一致性读)](#consistent-nonlocking-reads非锁定一致性读)
+    - [一致性读不支持某些DDL（drop、alter）语句](#一致性读不支持某些ddldropalter语句)
+    - [对于没有指定 `FOR UPDATE` 或者 `LOCK IN SHARE MODE` 的各种查询, 其行为有所不同, 如 `INSERT INTO ... SELECT`, `UPDATE ... (SELECT)`, 以及 `CREATE TABLE ... SELECT`:](#对于没有指定-for-update-或者-lock-in-share-mode-的各种查询-其行为有所不同-如-insert-into--select-update--select-以及-create-table--select)
+  - [Locking Reads](#locking-reads)
+    - [`SELECT ... LOCK IN SHARE MODE`](#select--lock-in-share-mode)
+    - [`SELECT ... FOR UPDATE`](#select--for-update)
+    - [Locking Read Examples](#locking-read-examples)
+      - [示例1](#示例1)
+      - [示例2](#示例2)
 
 ##  InnoDB Transaction Model
 
@@ -64,7 +70,7 @@
 
   示例：
 
-  ```
+  ```sql
   CREATE TABLE t (a INT NOT NULL, b INT) ENGINE = InnoDB;
   INSERT INTO t VALUES (1,2),(2,3),(3,2),(4,3),(5,2);
   COMMIT;
@@ -81,7 +87,7 @@
 
 假如使用默认的 `REPEATABLE READ` 隔离级别时, 第一个 `UPDATE` 会先在其扫描读取到的每一行上设置X锁, 并且不会释放任何一个:
 
-```
+```sql
 # Session A 加锁过程
 x-lock(1,2); retain x-lock
 x-lock(2,3); update(2,3) to (2,5); retain x-lock
@@ -92,13 +98,13 @@ x-lock(5,2); retain x-lock
 
 因为第一个 `UPDATE` 在所有行上都保留了锁, 第二个 `UPDATE` 尝试获取任何一个锁时都会立即阻塞, 直到第一个`UPDATE`提交或回滚之后才能继续执行:
 
-```
+```sql
 x-lock(1,2); block and wait for first UPDATE to commit or roll back
 ```
 
 如果使用 `READ COMMITTED` 隔离级别, 则第一个 `UPDATE` 会在扫描读取到的每一行上获取X锁, 然后释放不需要修改行上的X锁:
 
-```
+```sql
 # Session A 释放锁过程
 x-lock(1,2); unlock(1,2)
 x-lock(2,3); update(2,3) to (2,5); retain x-lock
@@ -109,7 +115,7 @@ x-lock(5,2); unlock(5,2)
 
 对于第二个`UPDATE`, InnoDB会执行半一致读(“semi-consistent” read), 将最新的提交版本返给MySQL, 让MySQL确定该行是否符合 `UPDATE` 的 `WHERE`条件:
 
-```
+```sql
 # Session BA 加锁过程
 x-lock(1,2); update(1,2) to (1,4); retain x-lock
 x-lock(2,3); unlock(2,3)
@@ -120,7 +126,7 @@ x-lock(5,2); update(5,2) to (5,4); retain x-lock
 
 `但是, 如果 WHERE 条件中包括了索引列, 并且 InnoDB 使用了这个索引, 则获取和保留record locks时只考虑索引列`。 在下面的示例中, 第一个 `UPDATE` 在所有 `b = 2` 的行上获取并保留一个X锁。 第二个 `UPDATE` 尝试获取同一记录上的X锁时会`阻塞`, 因为也使用了 b 这列上面定义的索引。
 
-```
+```sql
 CREATE TABLE t (a INT NOT NULL, b INT, c INT, INDEX (b)) ENGINE = InnoDB;
 INSERT INTO t VALUES (1,2,3),(2,2,4);
 COMMIT;
@@ -184,7 +190,7 @@ UPDATE t SET b = 4 WHERE b = 2 AND c = 4;
 
 > 在MySQL客户端API中, 例如 PHP, Perl DBI, JDBC, ODBC, 或者标准C调用接口, 可以将事务控制语句(如`COMMIT`)当做字符串发送给MySQL服务器, 就像普通的SQL语句(`SELECT` 和 `INSERT`)一样。 某些API还单独提供了提交事务和回滚的函数/方法。
 
-#### Consistent Nonlocking Reads(非锁定一致性读)
+### Consistent Nonlocking Reads(非锁定一致性读)
 
 > 一致性读(consistent read), 意味着 InnoDB 通过多版本技术, 为一个查询呈现出某个时间点上的数据库快照。
 >
@@ -202,7 +208,7 @@ UPDATE t SET b = 4 WHERE b = 2 AND c = 4;
 >
 > 数据库状态的快照适用于事务中的 `SELECT` 语句, 而不一定适用于DML语句(增删改)。 如果插入或修改一些行, 稍后再提交事务（T0）, 则另一个并发的 `REPEATABLE READ` 事务（T1）中的 `DELETE` 或者 `UPDATE` 语句可能会影响准备提交(just-committed)的这些行, 即使（T1）会话可能无法读取看到它们。 如果某个事务确实更新或删除已经被另一个事务提交的行, 则这些更改对于当前事务而言来说会变得可见。
 
-```
+```sql
 # 场景1
 SELECT COUNT(c1) FROM t1 WHERE c1 = 'xyz';
 -- Returns 0: 没有匹配的行. (查不到)
@@ -220,7 +226,7 @@ SELECT COUNT(c2) FROM t1 WHERE c2 = 'cba';
 
 - 我们可以通过提交事务, 然后执行另一个 `SELECT` 或者 `START TRANSACTION WITH CONSISTENT SNAPSHOT` 语句来推进时间点。这被称为**多版本并发控制(multi-versioned concurrency control)**。
 
-```
+```sql
              Session A              Session B
 
            SET autocommit=0;      SET autocommit=0;
@@ -245,19 +251,90 @@ v          SELECT * FROM t;
 
 如果要查看数据库的最新状态(freshest), 可以使用 `READ COMMITTED`隔离级别, 或者使用锁定读取:
 
-```
+```sql
 SELECT * FROM t LOCK IN SHARE MODE;
 ```
 
 - 使用 `READ COMMITTED` 隔离级别时, 事务中的每次一致性读都会设置并读取自己的新快照。 带有 `LOCK IN SHARE MODE` 的 SELECT 语句, 会发生`锁定读`: `SELECT` 可能会被阻塞, 直到包含最新行的事务结束为止。
 
-##### 一致性读不支持某些DDL（drop、alter）语句
+#### 一致性读不支持某些DDL（drop、alter）语句
 
 1. 一致性读不能在 `DROP TABLE` 时生效, 因为MySQL无法使用已删除的表, 而且 InnoDB 已经销毁了这张表。
 2. 一致性读不能在 `ALTER TABLE` 操作时生效, 因为这个操作会创建原始表的临时副本,并在构建临时副本之后删除原始表。 在事务中重新执行一致性读时, 新表中的数据行是不可见的, 因为事务在获取快照时这些行还不存在。 这种情况下, 会返回错误信息: `ER_TABLE_DEF_CHANGED`, “Table definition has changed, please retry transaction”.
 
-##### 对于没有指定 `FOR UPDATE` 或者 `LOCK IN SHARE MODE` 的各种查询, 其行为有所不同, 如 `INSERT INTO ... SELECT`, `UPDATE ... (SELECT)`, 以及 `CREATE TABLE ... SELECT`:
+#### 对于没有指定 `FOR UPDATE` 或者 `LOCK IN SHARE MODE` 的各种查询, 其行为有所不同, 如 `INSERT INTO ... SELECT`, `UPDATE ... (SELECT)`, 以及 `CREATE TABLE ... SELECT`:
 
 - 默认情况下, InnoDB 在这些语句中使用更强的锁, 而 `SELECT` 部分的行为类似于 `READ COMMITTED`, 即使在同一事务中, 每次一致性读都会设置并读取自己的新快照。
-
 - 要在这种情况下执行非锁定读取, 请启用 `innodb_locks_unsafe_for_binlog` 选项, 并将事务隔离级别设置为`READ UNCOMMITTED`, `READ COMMITTED`, 或者 `REPEATABLE READ`, 以避免在读取数据行时上锁。
+
+### Locking Reads
+
+> 如果在一个事务中, 先查询数据, 然后再insert或update相关数据, 则常规的 `SELECT` 语句并不能提供足够的保护。其他事务可以更新或删除我们刚刚查到的这些行。 InnoDB 支持两种类型的锁定读(Locking Read), 可以提供额外的安全性:
+
+#### `SELECT ... LOCK IN SHARE MODE`
+
+> 在读取到的所有行上设置共享锁。 其他会话可以读取这些行, 但在当前事务结束之前都不能修改。 在查询时, 如果某些行被其他尚未提交的事务修改了, 那么当前查询会被一直阻塞到那些事务结束, 然后使用最新的值。
+
+#### `SELECT ... FOR UPDATE`
+
+> 对于搜索到的索引记录, 锁定数据行以及所有关联的索引条目, 就如同对这些行执行了 `UPDATE` 语句一样。 其他事务会被阻塞, 包括修改、 使用 `SELECT ... LOCK IN SHARE MODE`来读取, 甚至在某些隔离级别执行读操作时, 都会阻塞。 一致性读会忽略读取视图中的记录上设置的任何锁。 (因为数据行的旧版本无法被锁定, 是通过记录的内存副本加上 undo logs 来重建的)。
+
+这类子句在处理树结构(tree-structured)或图结构(graph-structured)的数据时非常有用, 不管是单张表还是多张表。 我们可以先遍历一遍, 然后再去修改其中的某些记录。
+
+当事务被提交或者回滚时, 由 `LOCK IN SHARE MODE` 和 `FOR UPDATE` 设置的锁都会被释放。
+
+> note
+>
+> 只有禁用自动提交, 才可能执行锁定读。(一般使用 `START TRANSACTION` 语句或者设置 `autocommit=0`来禁用自动提交)。
+
+执行嵌套语句查询时, 外部查询中的锁定读, 不会对子查询的数据行加锁, 除非子查询也指定了锁定读。 例如, 下面的语句不会锁定 `t2` 表中的行。
+
+```sql
+SELECT * FROM t1 WHERE c1 = (SELECT c1 FROM t2) FOR UPDATE;
+```
+
+要锁定 `t2` 表中的行, 需要在子查询中也进行锁定读:
+
+```sql
+SELECT * FROM t1 WHERE c1 = (SELECT c1 FROM t2 FOR UPDATE) FOR UPDATE;
+```
+
+#### Locking Read Examples
+
+##### 示例1
+
+假设需要在 `child` 表中插入新行, 但要确保 `parent` 表中具有对应的记录。 在应用程序代码中, 可以通过以下顺序的操作, 来确保引用完整性。
+
+首先, 使用一致性读来查询 `parent` 表以检查父记录是否存在。 这样可以保证将数据安全地插入到 `child` 表吗？ 不能, 因为其他会话可能在我们不知道的情况下, 在 `SELECT` 和 `INSERT` 之间, 恰好把 `parent` 表中的那行数据给删了。
+
+要避免这个潜在的BUG, 可以通过 `LOCK IN SHARE MODE` 来执行 `SELECT `  :
+
+```sql
+SELECT * FROM parent WHERE NAME = 'Jones' LOCK IN SHARE MODE;
+```
+
+在 `LOCK IN SHARE MODE` 查询返回 parent 记录 `'Jones'` 之后, 可以安全地将记录添加到`child`表中, 然后提交事务。 其他事务如果试图获取 `parent` 表中对应数据行上的排他锁, 会被阻塞并需要等待我们完成操作之后才能继续, 也就是需要先等待这两张表中的数据处于一致状态。
+
+##### 示例2
+
+又比如, `CHILD_CODES` 表中有一个整型的 counter_field 字段, 用来为 `child` 表中的每条记录分配唯一ID。 我们不能使用一致性读或者共享模式来读取当前计数器的值, 因为这样会有多个客户端看到相同的值, 如果两个事务尝试使用相同的id来添加数据, 则会发生重复键错误(duplicate-key error)。
+
+在这个场景下, `LOCK IN SHARE MODE` 不是一种好方案, 如果有多个用户同时读取计数器, 则其中至少有一个会在更新计数器时陷入死锁状态。
+
+要读取计数器并实现递增, 需要先执行 `FOR UPDATE` 对计数器的锁定读, 然后再递增计数。例如：
+
+```sql
+SELECT counter_field FROM child_codes FOR UPDATE;
+UPDATE child_codes SET counter_field = counter_field + 1;
+```
+
+`SELECT ... FOR UPDATE` 会读取最新的可用数据, 并在读到的每一行上设置排他锁。 因此, 它设置的锁与 `UPDATE` 语句设置的锁相同。
+
+这个示例仅仅是为了演示 `SELECT ... FOR UPDATE` 的工作原理。 在MySQL中, 生成唯一标识的任务, 实际上可以通过一次查询就能完成:
+
+```sql
+UPDATE child_codes SET counter_field = LAST_INSERT_ID(counter_field + 1);
+SELECT LAST_INSERT_ID();
+```
+
+`SELECT` 语句只会基于当前会话来查询id信息。而且不读任何一张表。
