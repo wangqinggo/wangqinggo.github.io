@@ -6,5 +6,7 @@
 - [15.7.1-InnoDB-Locking](./MySQL/15.7.1-InnoDB-Locking.md)
 - [15.7.2-Transaction-Model](MySQL/15.7.2-Transaction-Model.md)
 - [15.7.3-Locks-Set-by-Different-SQL-Statements-in-InnoDB](MySQL/15.7.3-Locks-Set-by-Different-SQL-Statements-in-InnoDB.md)
+- [15.7.4-Phantom-Rows](MySQL/15.7.4-Phantom-Rows.md)
+- [15.7.5-Deadlocks-in-InnoDB](MySQL/15.7.5-Deadlocks-in-InnoDB.md)
 - [Oracle执行计划](./Oracle执行计划.md)
 - [Redis](./Redis.md)
