@@ -1,6 +1,6 @@
 > `...` means that it's a folder
 
-- [HashMap-HashTable-ConcurrentHashMap](./2021/2021-03-10-HashMap-HashTable-ConcurrentHashMap.md)
+- [linux tool](./basis-standard/linux-tool.md)
 - [如何掌握所有的程序语言](./2021/2021-03-05-master-pl.md)
 - [Quartz-intro](./2021/2021-02-04-Quartz-intro.md)
 - [分布式系统理论](./2020/2020-10-13-distributed_theory.md)
