@@ -1,5 +1,34 @@
 [..](./../basis-standard/index.md)
-# tcp基础
+
+# TCP基础
+
+## 分层
+
+![wangluojiegou](image/wangluojiegou.png)
+
+![xieyizu](image/xieyizu.png)
+
+## 应用层
+
+> 应用进程间通信和交互规则。包含域名系统DNS、万维网HTTP、电子邮件SMTP等；
+>
+> 应用层交互的数据单位为报文（message）。
+
+## 运输层（TCP与UDP）
+
+## ![tcpudp](image/tcpudp.png)
+
+## 网络层
+
+> 负责为分组交换网络上不同主机提供通信服务。
+>
+> 发送数据时，将运输层产生的报文段或用户数据报封装成分组或包进行传送。
+
+## 数据链路层
+
+> 两个相邻结点间传送数据，将IP层交下来的IP数据报组装成帧（framing），在相邻链路间传输帧，每一帧包括数据和必要的控制信息（如同步信息、地址信息、差错控制等）
+
+# TCP调优
 
 ## TCP 三次握手的性能提升
 
