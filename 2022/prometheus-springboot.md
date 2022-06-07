@@ -34,37 +34,34 @@
 
 ![jvm2](image/jvm2.jpeg)
 
-## JVM Memory Pools(Heap)
+## JVM (Micrometer) 监控指标
 
-- used 
-- commited
-- Max
+### JVM Memory Pools(Heap)
 
-### PS Eden Space
+![space](image/space.png)
 
-### PS Old Gen
+#### PS Eden Space
 
-### PS Survivor Space
+#### PS Old Gen
 
-## JVM Memory Pools(Non-Heap)
-- used 
-- commited
-- Max
+#### PS Survivor Space
 
-### Metaspace
+### JVM Memory Pools(Non-Heap)
 
-### Compressed Class Space
+#### Metaspace
 
-### Code Cache
+#### Compressed Class Space
 
-## GC（Garbage Collection）
+#### Code Cache
+
+### GC（Garbage Collection）
 
 > 参考：[从实际案例聊聊Java应用的GC优化](https://tech.meituan.com/2017/12/29/jvm-optimize.html)
 
-### Collections（回收频率）
+#### Collections（回收频率）
 
-### Pause Durations
+#### Pause Durations
 
 > 是指垃圾处理器停止应用程序的运行，专注于空间释放时所花的时间.
 
-### Allocated/Promoted(分配与晋升)
+#### Allocated/Promoted(分配与晋升)
