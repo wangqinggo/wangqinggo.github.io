@@ -59,8 +59,12 @@
 
 ## GC（Garbage Collection）
 
-### Collections
+> 参考：[从实际案例聊聊Java应用的GC优化](https://tech.meituan.com/2017/12/29/jvm-optimize.html)
+
+### Collections（回收频率）
 
 ### Pause Durations
 
-### Allocated/Promoted(分配与提升)
+> 是指垃圾处理器停止应用程序的运行，专注于空间释放时所花的时间.
+
+### Allocated/Promoted(分配与晋升)
