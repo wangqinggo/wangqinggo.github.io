@@ -60,11 +60,31 @@
     - Quick Sort
     - [148. Sort List](https://leetcode.cn/problems/sort-list)
 
-9. Convert Real Life Problem to Code 
-    - [146. LRU Cache](https://leetcode.cn/problems/lru-cache) 
-    - `1066. Compus Bike`
-    - `490. The Maze` 
+9. Convert Real Life Problem to Code
+   - [146. LRU Cache](https://leetcode.cn/problems/lru-cache)
+   - `1066. Compus Bike`
+   - `490. The Maze`
 
 10. Time Space Complexity
-    - 一般面试的时候 你说完算法 就要说 这个算法的 time / space complexity是什么
-    - 每次你做完一道题 给自己养成一个习惯 就是想一下他的时间空间复杂度是多少
+   - 一般面试的时候 你说完算法 就要说 这个算法的 time / space complexity是什么
+   - 每次你做完一道题 给自己养成一个习惯 就是想一下他的时间空间复杂度是多少
+
+## 二叉树专题
+
+[参考《代码随想录》](https://www.programmercarl.com/%E4%BA%8C%E5%8F%89%E6%A0%91%E7%90%86%E8%AE%BA%E5%9F%BA%E7%A1%80.html)
+
+### 二叉树遍历
+
+> 深度优先遍历中（递归｜迭代）：
+> 中在什么位置即为 什么排序；左永远在右前;
+- 前序：中左右
+- 中序：左中右
+- 后续：左右中
+
+> 广度优先遍历：层次遍历（迭代）
+
+### 递归三要素
+1. 确定递归函数参数和返回值；
+2. 确定终止条件；
+3. 确认单层递归的逻辑；
+
